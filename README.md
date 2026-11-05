@@ -8,11 +8,14 @@ A cozy sailing puzzle across 20 islands.
 
 ## How to Play
 
-- Use arrow keys, WASD, or swipe to sail until the next obstacle.
+- **Arrow keys / WASD:** Sail until the next obstacle.
+- **Swipe:** Sail in the swipe direction on touch screens.
 - Collect three chart pieces and reach the lighthouse.
 - Ride currents, break driftwood, and avoid reefs and pirate firing lanes.
 - Ram pirates from a safe side to clear the route.
-- Press R to retry, M to toggle sound, or Tab to select unlocked islands.
+- **R:** Retry the current island.
+- **M:** Toggle sound.
+- **Tab:** Select unlocked islands.
 
 ## Development
 
