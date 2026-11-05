@@ -1,0 +1,16 @@
+# Godot and local editor state
+.godot/
+.DS_Store
+*.log
+
+# Generated output and local archives
+build/
+archive/
+.export_templates/
+__pycache__/
+*.pyc
+
+# Local credentials
+.env
+.env.*
+*.pem
