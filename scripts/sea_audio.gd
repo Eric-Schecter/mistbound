@@ -151,7 +151,7 @@ func set_muted(value: bool, persist := true) -> void:
 
 func toggle_mute() -> void:
 	set_muted(not muted)
-	if not muted: cue("ui", game.visual)
+	if not muted: menu_cue(false)
 
 func _exit_tree() -> void:
 	if is_instance_valid(menu): menu.stop()

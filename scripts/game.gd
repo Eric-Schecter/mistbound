@@ -29,6 +29,7 @@ const CURRENTS := {">": Vector2i.RIGHT, "<": Vector2i.LEFT, "^": Vector2i.UP, "v
 const HINTS := ["Sail until the shore. Collect 3 chart pieces and reach the lighthouse.", "Follow the currents: teal arrows turn your boat as you pass.", "Flank the lookout before using its guarded channel. Avoid the reefs.", "Clear driftwood and flank the lookout. Wood blocks its firing lane.", "Clear the lookout before riding the currents through the islands.", "Plan your turns, flank the lookout, and bring every chart piece home.", "Read the red firing lanes before setting sail. Every current offers a route.", "Read the red firing lanes before setting sail. Every current offers a route.", "Read the red firing lanes before setting sail. Every current offers a route.", "Read the red firing lanes before setting sail. Every current offers a route.", "Read the red firing lanes before setting sail. Every current offers a route.", "Read the red firing lanes before setting sail. Every current offers a route.", "Read the red firing lanes before setting sail. Every current offers a route.", "Two lookouts guard these waters. Clear their firing lanes one at a time.", "Two lookouts guard these waters. Clear their firing lanes one at a time.", "Two lookouts guard these waters. Clear their firing lanes one at a time.", "Two lookouts guard these waters. Clear their firing lanes one at a time.", "Two lookouts guard these waters. Clear their firing lanes one at a time.", "Two lookouts guard these waters. Clear their firing lanes one at a time.", "Two lookouts guard these waters. Clear their firing lanes one at a time."]
 const CLOSE_RECT := Rect2(870, 110, 85, 36)
 var close_hovered := false
+var hovered_ui := ""
 var level := 0
 var board: Array = []
 const PIRATE_CELLS := [[], [Vector2i(6, 2)], [Vector2i(1, 2)], [Vector2i(10, 1)], [Vector2i(9, 5)], [Vector2i(3, 1)], [Vector2i(4, 7)], [Vector2i(10, 3)], [Vector2i(4, 5)], [Vector2i(1, 2)], [Vector2i(10, 3)], [Vector2i(4, 6)], [Vector2i(7, 6)], [Vector2i(3, 1), Vector2i(1, 4)], [Vector2i(10, 1), Vector2i(1, 7)], [Vector2i(1, 3), Vector2i(5, 6)], [Vector2i(1, 2), Vector2i(4, 6)], [Vector2i(5, 2), Vector2i(7, 2)], [Vector2i(6, 7), Vector2i(7, 5)], [Vector2i(7, 7), Vector2i(5, 2)]]
@@ -91,6 +92,7 @@ func _ready() -> void:
 	load_level()
 
 func load_level() -> void:
+	clear_ui_hover()
 	selecting_island = false
 	generation += 1
 	queued_direction = Vector2i.ZERO
@@ -163,6 +165,7 @@ func advance_level() -> void:
 	if won and level < MAPS.size() - 1:
 		level += 1
 		load_level()
+		sound.menu_cue(false)
 
 func island_available(index: int) -> bool:
 	return index == 0 or best.has(str(index)) or best.has(str(index - 1))
@@ -172,14 +175,17 @@ func island_card(index: int) -> Rect2:
 
 func open_islands() -> void:
 	if selecting_island: return
+	clear_ui_hover()
 	map_was_paused = paused
-	if not paused: toggle_pause()
+	if not paused: toggle_pause(false)
 	selecting_island = true
 	close_hovered = false
 	selection_index = level
 	gesture = false
+	sound.menu_cue(false)
 
 func close_islands() -> void:
+	clear_ui_hover()
 	selecting_island = false
 	close_hovered = false
 	if not map_was_paused and paused: toggle_pause(false)
@@ -189,6 +195,7 @@ func choose_island(index: int) -> void:
 	if index < 0 or index >= MAPS.size() or not island_available(index): return
 	level = index
 	load_level()
+	sound.menu_cue(false)
 
 func record_result(persist := true) -> void:
 	var key := str(level)
@@ -202,12 +209,62 @@ func record_result(persist := true) -> void:
 	var records := FileAccess.open("user://archipelago_records.json", FileAccess.WRITE)
 	if records: records.store_string(JSON.stringify(best_moves))
 
-func _unhandled_input(event: InputEvent) -> void:
+func ui_buttons() -> Dictionary:
 	if selecting_island:
-		if event is InputEventMouseMotion:
-			var hovering := CLOSE_RECT.has_point(get_global_transform_with_canvas().affine_inverse() * event.position)
-			if hovering and not close_hovered: sound.menu_cue(true)
-			close_hovered = hovering
+		var buttons := {"close": CLOSE_RECT}
+		for index in range(MAPS.size()):
+			if island_available(index): buttons["island_%d" % index] = island_card(index)
+		return buttons
+	if won:
+		if campaign_complete(): return {"islands": Rect2(430, 490, 240, 44)}
+		var buttons := {"next": Rect2(380, 450, 340, 44)}
+		if collected < 3: buttons["retry"] = Rect2(380, 500, 340, 36)
+		return buttons
+	if paused:
+		return {"continue": Rect2(380, 371, 340, 44), "retry": Rect2(380, 423, 340, 44)}
+	return {"islands": Rect2(605, 102, 86, 34), "sound": Rect2(704, 102, 106, 34), "retry": Rect2(830, 102, 68, 34)}
+
+func ui_at(point: Vector2) -> String:
+	var buttons := ui_buttons()
+	for action in buttons:
+		if buttons[action].has_point(point): return action
+	return ""
+
+func clear_ui_hover() -> void:
+	hovered_ui = ""
+	close_hovered = false
+	Input.set_default_cursor_shape(Input.CURSOR_ARROW)
+
+func activate_ui(action: String) -> void:
+	clear_ui_hover()
+	match action:
+		"close": close_islands()
+		"islands": open_islands()
+		"sound": sound.toggle_mute()
+		"retry":
+			load_level()
+			sound.menu_cue(false)
+		"next": advance_level()
+		"continue": toggle_pause()
+		_:
+			if action.begins_with("island_"): choose_island(int(action.trim_prefix("island_")))
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion:
+		var action := ui_at(get_global_transform_with_canvas().affine_inverse() * event.position)
+		if action != hovered_ui and not action.is_empty(): sound.menu_cue(true)
+		hovered_ui = action
+		close_hovered = action == "close"
+		Input.set_default_cursor_shape(Input.CURSOR_POINTING_HAND if not action.is_empty() else Input.CURSOR_ARROW)
+	if (event is InputEventMouseButton or event is InputEventScreenTouch) and event.pressed:
+		if event is InputEventMouseButton and event.button_index != MOUSE_BUTTON_LEFT: return
+		var action := ui_at(get_global_transform_with_canvas().affine_inverse() * event.position)
+		if not action.is_empty():
+			gesture = false
+			activate_ui(action)
+			return
+		if paused or won: return
+	if selecting_island:
 		if event is InputEventKey and event.pressed and not event.echo:
 			match event.keycode:
 				KEY_ESCAPE, KEY_TAB: close_islands()
@@ -237,7 +294,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		match event.keycode:
 			KEY_TAB: open_islands()
 			KEY_M: sound.toggle_mute()
-			KEY_R: load_level()
+			KEY_R: activate_ui("retry")
 			KEY_ESCAPE: toggle_pause()
 			KEY_ENTER, KEY_SPACE:
 				if won: advance_level()
@@ -270,13 +327,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		_unhandled_input(mouse)
 
 func toggle_pause(feedback := true) -> void:
+	clear_ui_hover()
 	paused = not paused
 	sound.set_paused(paused)
 	queued_direction = Vector2i.ZERO
 	if settle_tween and settle_tween.is_valid():
 		if paused: settle_tween.pause()
 		else: settle_tween.play()
-	if not paused and feedback: sound.cue("ui", visual)
+	if feedback: sound.menu_cue(false)
 	if active_tween and active_tween.is_valid():
 		if paused: active_tween.pause()
 		else: active_tween.play()
@@ -370,6 +428,7 @@ func dash(direction: Vector2i) -> void:
 			active_tween.tween_property(self, "sail_power", 0.18, 0.32).set_trans(Tween.TRANS_SINE)
 			await active_tween.finished
 			if token != generation: return
+			clear_ui_hover()
 			won = true
 			record_result()
 			break

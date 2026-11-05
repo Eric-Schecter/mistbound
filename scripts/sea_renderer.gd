@@ -156,10 +156,10 @@ func render() -> void:
 	panel(Rect2(202, 102, 696, 34), Color(0.10, 0.35, 0.38, 0.94), Color("dbb278"), 7)
 	label("Moves  %02d" % g.moves, Vector2(218, 125), 17)
 	for i in range(3): sprite(2, Vector2(343 + i * 34, 119), Vector2(26, 26), Color.WHITE if i < g.collected else Color(0.3, 0.45, 0.43, 0.9))
-	label("Islands", Vector2(613, 125), 16)
-	label("Sound Off" if g.sound.muted else "Sound On", Vector2(714, 125), 16)
+	ui_button("islands", Rect2(605, 102, 86, 34), "Islands")
+	ui_button("sound", Rect2(704, 102, 106, 34), "Sound Off" if g.sound.muted else "Sound On")
 	if not g.campaign_complete() and not (g.won and g.collected == 3):
-		label("Retry", Vector2(840, 125), 16)
+		ui_button("retry", Rect2(830, 102, 68, 34), "Retry")
 	# Bronze, stone and a fine inner highlight echo the illustrated architecture.
 	panel(Rect2(g.ORIGIN - Vector2(10, 10), Vector2(716, 542)), Color(0, 0, 0, 0), Color("b8864b"), 12)
 	panel(Rect2(g.ORIGIN - Vector2(6, 6), Vector2(708, 534)), Color(0, 0, 0, 0), gold, 8)
@@ -218,6 +218,12 @@ func render() -> void:
 	if g.selecting_island: island_map()
 	elif g.won or g.paused: overlay()
 
+func ui_button(action: String, rect: Rect2, text: String, size := 16) -> void:
+	var hovered: bool = g.hovered_ui == action
+	panel(rect, Color("498f94") if hovered else Color("28555a"), gold if hovered else Color("608b88"), 8)
+	var width: float = g.font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	label(text, rect.position + Vector2((rect.size.x - width) * 0.5, (rect.size.y + size) * 0.5 - 2), size, gold if hovered else cream)
+
 func overlay() -> void:
 	g.draw_rect(Rect2(-g.position / g.scale, g.get_viewport_rect().size / g.scale), Color(0.015, 0.07, 0.09, 0.79))
 	panel(Rect2(312, 230, 476, 330), Color("286b72"), gold, 15)
@@ -227,30 +233,29 @@ func overlay() -> void:
 		centered_label("%d moves · %d / 3 chart pieces" % [g.moves, g.collected], 427, 21)
 		if g.campaign_complete():
 			centered_label("All 20 islands completed · %d / 60 charts" % g.total_charts(), 465, 17)
-			panel(Rect2(430, 490, 240, 44), Color("28555a"), gold, 8)
-			centered_label("Return to Islands", 519, 19)
+			ui_button("islands", Rect2(430, 490, 240, 44), "Return to Islands", 19)
 			return
-		centered_label("Enter / Click: Next Island", 481, 19)
+		ui_button("next", Rect2(380, 450, 340, 44), "Next Island · Enter", 19)
 		if g.collected < 3:
-			centered_label("R: Retry to find every chart piece", 522, 16, Color("a9c3bb"))
+			ui_button("retry", Rect2(380, 500, 340, 36), "Retry for all charts · R")
 		elif not g.PIRATE_CELLS[g.level].is_empty():
 			centered_label("%d pirate boats sunk" % g.pirates_sunk, 522, 16, Color("a9c3bb"))
 	else:
-		centered_label("Esc: Continue sailing", 401, 20)
-		centered_label("R: Restart voyage", 453, 18, Color("a9c3bb"))
+		ui_button("continue", Rect2(380, 371, 340, 44), "Continue sailing · Esc", 20)
+		ui_button("retry", Rect2(380, 423, 340, 44), "Restart voyage · R", 18)
 
 func island_map() -> void:
 	g.draw_rect(Rect2(-g.position / g.scale, g.get_viewport_rect().size / g.scale), Color(0.015, 0.07, 0.09, 0.88))
 	panel(Rect2(126, 92, 848, 642), Color("245d66"), gold, 14)
 	label("The Archipelago", Vector2(153, 139), 28)
 	label("%d / 20 islands reached  ·  %d / 60 chart pieces" % [g.best.size(), g.total_charts()], Vector2(153, 170), 15, cream)
-	panel(g.CLOSE_RECT, Color("498f94") if g.close_hovered else Color("28555a"), gold if g.close_hovered else Color("608b88"), 8)
-	label("Close", Vector2(890, 135), 16, gold if g.close_hovered else cream)
+	ui_button("close", g.CLOSE_RECT, "Close")
 	for index in range(g.MAPS.size()):
 		var rect: Rect2 = g.island_card(index)
 		var available: bool = g.island_available(index)
 		var focused: bool = g.selection_index == index
-		panel(rect, Color("397c80") if available else Color("173038"), gold if focused else Color("466663"), 8)
+		var hovered: bool = available and g.hovered_ui == "island_%d" % index
+		panel(rect, Color("498f94") if hovered else (Color("397c80") if available else Color("173038")), gold if focused or hovered else Color("466663"), 8)
 		var name_width: float = g.font.get_string_size(g.NAMES[index], HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
 		label(g.NAMES[index], rect.position + Vector2((150 - name_width) * 0.5, 19), 12, cream if available else Color("758b8c"))
 		sprite(1, rect.position + Vector2(75, 48), Vector2(49, 42), Color.WHITE if available else Color(0.4, 0.5, 0.5, 0.65))

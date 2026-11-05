@@ -40,6 +40,7 @@ jobs:
           godot --headless --fixed-fps 60 --script tests/motion_regression.gd
           godot --headless --fixed-fps 60 --script tests/input_buffer.gd
           godot --headless --fixed-fps 60 --script tests/island_map.gd
+          godot --headless --fixed-fps 60 --script tests/ui_feedback.gd
           godot --headless --fixed-fps 60 --script tests/playthrough.gd
       - name: Export
         run: sh tools/export_web.sh
