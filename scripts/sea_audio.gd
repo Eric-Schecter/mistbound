@@ -7,6 +7,9 @@ const LEVELS := {"chart": -16.0, "wood": -12.0, "impact": -11.0, "dock": -16.0, 
 var game: Node2D
 var clips: Dictionary = {}
 var voices: Array[AudioStreamPlayer2D] = []
+var menu: AudioStreamPlayer
+var menu_hover: AudioStreamWAV
+var menu_press: AudioStreamWAV
 var music: AudioStreamPlayer
 var music_gain := 0.0
 var wake: AudioStreamPlayer
@@ -22,11 +25,16 @@ var rng := RandomNumberGenerator.new()
 
 func setup(owner_game: Node2D) -> void:
 	game = owner_game
+	menu_hover = load("res://assets/audio/menu-hover.wav")
+	menu_press = load("res://assets/audio/menu-press.wav")
+	menu = AudioStreamPlayer.new()
+	add_child(menu)
 	rng.seed = 710
 	if AudioServer.get_bus_index(BUS) < 0:
 		AudioServer.add_bus()
 		AudioServer.set_bus_name(AudioServer.bus_count - 1, BUS)
 	AudioServer.set_bus_volume_db(AudioServer.get_bus_index(BUS), 4.0)
+	menu.bus = BUS
 	for name in LEVELS:
 		clips[name] = load("res://assets/audio/%s.wav" % name)
 	for i in range(12):
@@ -61,6 +69,13 @@ func setup(owner_game: Node2D) -> void:
 	music.volume_db = -70.0
 	add_child(music)
 	music.play()
+
+func menu_cue(hover: bool) -> void:
+	# UI stays audible while the voyage is paused, and still respects mute.
+	menu.stop()
+	menu.stream = menu_hover if hover else menu_press
+	menu.volume_db = linear_to_db(0.75 if hover else 0.85) - 4.0
+	menu.play()
 
 func cue(name: String, position: Vector2, pitch := 1.0) -> void:
 	if suspended or not clips.has(name): return
@@ -139,6 +154,7 @@ func toggle_mute() -> void:
 	if not muted: cue("ui", game.visual)
 
 func _exit_tree() -> void:
+	if is_instance_valid(menu): menu.stop()
 	for voice in voices: voice.stop()
 	if is_instance_valid(wake): wake.stop()
 	if is_instance_valid(music): music.stop()
@@ -146,6 +162,7 @@ func _exit_tree() -> void:
 func shutdown() -> void:
 	# AudioServer releases stopped playbacks asynchronously (Godot issue #76745).
 	suspended = true
+	menu.stop()
 	music.stream_paused = false
 	music.stop()
 	for voice in voices:

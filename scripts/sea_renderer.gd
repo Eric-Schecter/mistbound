@@ -244,7 +244,8 @@ func island_map() -> void:
 	panel(Rect2(126, 92, 848, 642), Color("245d66"), gold, 14)
 	label("The Archipelago", Vector2(153, 139), 28)
 	label("%d / 20 islands reached  ·  %d / 60 chart pieces" % [g.best.size(), g.total_charts()], Vector2(153, 170), 15, cream)
-	label("Close", Vector2(890, 135), 16)
+	panel(g.CLOSE_RECT, Color("498f94") if g.close_hovered else Color("28555a"), gold if g.close_hovered else Color("608b88"), 8)
+	label("Close", Vector2(890, 135), 16, gold if g.close_hovered else cream)
 	for index in range(g.MAPS.size()):
 		var rect: Rect2 = g.island_card(index)
 		var available: bool = g.island_available(index)

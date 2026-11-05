@@ -27,6 +27,8 @@ const MAPS := [
 const NAMES := ["First Light Bay", "With the Current", "Hidden Reefs", "Driftwood Strait", "Turning Tides", "Distant Lights", "Amber Shoals", "Lookout Cove", "Broken Passage", "Crosswind Reach", "Smuggler Bay", "Coral Channels", "Whispering Tide", "Twin Lookouts", "Copper Coast", "Splitwater Sound", "Sentinel Strait", "Stormglass Isles", "Last Watch", "Homeward Light"]
 const CURRENTS := {">": Vector2i.RIGHT, "<": Vector2i.LEFT, "^": Vector2i.UP, "v": Vector2i.DOWN}
 const HINTS := ["Sail until the shore. Collect 3 chart pieces and reach the lighthouse.", "Follow the currents: teal arrows turn your boat as you pass.", "Flank the lookout before using its guarded channel. Avoid the reefs.", "Clear driftwood and flank the lookout. Wood blocks its firing lane.", "Clear the lookout before riding the currents through the islands.", "Plan your turns, flank the lookout, and bring every chart piece home.", "Read the red firing lanes before setting sail. Every current offers a route.", "Read the red firing lanes before setting sail. Every current offers a route.", "Read the red firing lanes before setting sail. Every current offers a route.", "Read the red firing lanes before setting sail. Every current offers a route.", "Read the red firing lanes before setting sail. Every current offers a route.", "Read the red firing lanes before setting sail. Every current offers a route.", "Read the red firing lanes before setting sail. Every current offers a route.", "Two lookouts guard these waters. Clear their firing lanes one at a time.", "Two lookouts guard these waters. Clear their firing lanes one at a time.", "Two lookouts guard these waters. Clear their firing lanes one at a time.", "Two lookouts guard these waters. Clear their firing lanes one at a time.", "Two lookouts guard these waters. Clear their firing lanes one at a time.", "Two lookouts guard these waters. Clear their firing lanes one at a time.", "Two lookouts guard these waters. Clear their firing lanes one at a time."]
+const CLOSE_RECT := Rect2(870, 110, 85, 36)
+var close_hovered := false
 var level := 0
 var board: Array = []
 const PIRATE_CELLS := [[], [Vector2i(6, 2)], [Vector2i(1, 2)], [Vector2i(10, 1)], [Vector2i(9, 5)], [Vector2i(3, 1)], [Vector2i(4, 7)], [Vector2i(10, 3)], [Vector2i(4, 5)], [Vector2i(1, 2)], [Vector2i(10, 3)], [Vector2i(4, 6)], [Vector2i(7, 6)], [Vector2i(3, 1), Vector2i(1, 4)], [Vector2i(10, 1), Vector2i(1, 7)], [Vector2i(1, 3), Vector2i(5, 6)], [Vector2i(1, 2), Vector2i(4, 6)], [Vector2i(5, 2), Vector2i(7, 2)], [Vector2i(6, 7), Vector2i(7, 5)], [Vector2i(7, 7), Vector2i(5, 2)]]
@@ -173,12 +175,15 @@ func open_islands() -> void:
 	map_was_paused = paused
 	if not paused: toggle_pause()
 	selecting_island = true
+	close_hovered = false
 	selection_index = level
 	gesture = false
 
 func close_islands() -> void:
 	selecting_island = false
-	if not map_was_paused and paused: toggle_pause()
+	close_hovered = false
+	if not map_was_paused and paused: toggle_pause(false)
+	sound.menu_cue(false)
 
 func choose_island(index: int) -> void:
 	if index < 0 or index >= MAPS.size() or not island_available(index): return
@@ -199,6 +204,10 @@ func record_result(persist := true) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if selecting_island:
+		if event is InputEventMouseMotion:
+			var hovering := CLOSE_RECT.has_point(get_global_transform_with_canvas().affine_inverse() * event.position)
+			if hovering and not close_hovered: sound.menu_cue(true)
+			close_hovered = hovering
 		if event is InputEventKey and event.pressed and not event.echo:
 			match event.keycode:
 				KEY_ESCAPE, KEY_TAB: close_islands()
@@ -210,7 +219,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif (event is InputEventMouseButton or event is InputEventScreenTouch) and event.pressed:
 			if event is InputEventMouseButton and event.button_index != MOUSE_BUTTON_LEFT: return
 			var pointer: Vector2 = get_global_transform_with_canvas().affine_inverse() * event.position
-			if Rect2(870, 110, 85, 36).has_point(pointer): close_islands()
+			if CLOSE_RECT.has_point(pointer): close_islands()
 			else:
 				for index in range(MAPS.size()):
 					if island_card(index).has_point(pointer): choose_island(index); break
@@ -260,14 +269,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		mouse.position = event.position
 		_unhandled_input(mouse)
 
-func toggle_pause() -> void:
+func toggle_pause(feedback := true) -> void:
 	paused = not paused
 	sound.set_paused(paused)
 	queued_direction = Vector2i.ZERO
 	if settle_tween and settle_tween.is_valid():
 		if paused: settle_tween.pause()
 		else: settle_tween.play()
-	if not paused: sound.cue("ui", visual)
+	if not paused and feedback: sound.cue("ui", visual)
 	if active_tween and active_tween.is_valid():
 		if paused: active_tween.pause()
 		else: active_tween.play()
