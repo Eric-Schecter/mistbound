@@ -18,8 +18,6 @@ cp web/README.txt build/web/README.txt
 cp web/favicon.svg build/web/favicon.svg
 touch build/web/.nojekyll
 cp assets/promo/mistbound-cover.png build/web/cover.png
-cp assets/audio/ui.wav build/web/hover.wav
-cp assets/audio/ui.wav build/web/press.wav
 python3 - <<'PY'
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
