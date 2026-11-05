@@ -156,10 +156,10 @@ func render() -> void:
 	panel(Rect2(202, 102, 696, 34), Color(0.10, 0.35, 0.38, 0.94), Color("dbb278"), 7)
 	label("Moves  %02d" % g.moves, Vector2(218, 125), 17)
 	for i in range(3): sprite(2, Vector2(343 + i * 34, 119), Vector2(26, 26), Color.WHITE if i < g.collected else Color(0.3, 0.45, 0.43, 0.9))
-	ui_button("islands", Rect2(605, 102, 86, 34), "Islands")
-	ui_button("sound", Rect2(704, 102, 106, 34), "Sound Off" if g.sound.muted else "Sound On")
+	ui_button("islands", Rect2(605, 102, 86, 34), "Islands", 16, true)
+	ui_button("sound", Rect2(704, 102, 106, 34), "Sound Off" if g.sound.muted else "Sound On", 16, true)
 	if not g.campaign_complete() and not (g.won and g.collected == 3):
-		ui_button("retry", Rect2(830, 102, 68, 34), "Retry")
+		ui_button("retry", Rect2(830, 102, 68, 34), "Retry", 16, true)
 	# Bronze, stone and a fine inner highlight echo the illustrated architecture.
 	panel(Rect2(g.ORIGIN - Vector2(10, 10), Vector2(716, 542)), Color(0, 0, 0, 0), Color("b8864b"), 12)
 	panel(Rect2(g.ORIGIN - Vector2(6, 6), Vector2(708, 534)), Color(0, 0, 0, 0), gold, 8)
@@ -218,9 +218,16 @@ func render() -> void:
 	if g.selecting_island: island_map()
 	elif g.won or g.paused: overlay()
 
-func ui_button(action: String, rect: Rect2, text: String, size := 16) -> void:
+func ui_button(action: String, rect: Rect2, text: String, size := 16, flat := false) -> void:
 	var hovered: bool = g.hovered_ui == action
-	panel(rect, Color("498f94") if hovered else Color("28555a"), gold if hovered else Color("608b88"), 8)
+	if flat:
+		if hovered:
+			var highlight := StyleBoxFlat.new()
+			highlight.bg_color = Color(0.72, 0.91, 0.87, 0.12)
+			highlight.set_corner_radius_all(4)
+			g.draw_style_box(highlight, rect.grow(-4))
+	else:
+		panel(rect, Color("498f94") if hovered else Color("28555a"), gold if hovered else Color("608b88"), 8)
 	var width: float = g.font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 	label(text, rect.position + Vector2((rect.size.x - width) * 0.5, (rect.size.y + size) * 0.5 - 2), size, gold if hovered else cream)
 
